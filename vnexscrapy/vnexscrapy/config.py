@@ -6,11 +6,6 @@ DB_CONFIG = {
     'port': '5432',
 }
 
-CRAWL_SETTINGS = {
-    # 'DOWNLOAD_DELAY': 4,
-    # 'CONCURRENT_REQUESTS': 5,
-}
-
 DOMAIN_CONFIG = [
     {
         'id': '1',

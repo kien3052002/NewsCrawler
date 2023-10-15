@@ -2,79 +2,82 @@ import psycopg2
 from vnexscrapy.config import DB_CONFIG, DOMAIN_CONFIG
 
 
-
 class DatabasePipeline:
 
     def __init__(self):
         self.connection = None
         self.cursor = None
 
-        self.create_query_news = """
-                        CREATE TABLE IF NOT EXISTS news (
-                           id TEXT PRIMARY KEY,
-                           title TEXT,
-                           source_id TEXT REFERENCES source(id) ON DELETE CASCADE,
-                           category_id TEXT REFERENCES category(id) ON DELETE SET NULL,
-                           author TEXT,
-                           description TEXT,
-                           content_html TEXT,
-                           content_text TEXT,
-                           keywords TEXT
-                        );
-                        """
-        self.create_query_category = """
-                        CREATE TABLE IF NOT EXISTS category (
-                           id TEXT PRIMARY KEY,
-                           title TEXT
-                        );
-                        """
-
-        self.create_query_source = """
-                        CREATE TABLE IF NOT EXISTS source (
-                           id TEXT PRIMARY KEY,
-                           url TEXT,
-                           domain TEXT,
-                           title TEXT,
-                           publish_date TEXT,
-                           last_mod TEXT,
-                           author TEXT
-                        );
-                        """
-        self.create_query_config = """
-                        CREATE TABLE IF NOT EXISTS config (
-                            id TEXT PRIMARY KEY,
-                            domain TEXT,
-                            news_id_selector TEXT,
-                            news_from_list_selector TEXT,
-                            news_title_selector TEXT,
-                            publish_date_selector TEXT,
-                            last_mod_selector TEXT,
-                            author_selector TEXT,
-                            description_selector TEXT,
-                            content_html_selector TEXT,
-                            content_text_selector TEXT,
-                            keywords_selector TEXT,
-                            category_id_selector TEXT,
-                            category_url_list_selector TEXT,
-                            category_title_selector TEXT,
-                            next_page_selector TEXT
-                        );
-        """
-
-
-
-    def open_spider(self, spider):
-
+    def db_init(self):
         self.connection = psycopg2.connect(**DB_CONFIG)
         self.cursor = self.connection.cursor()
 
-        self.cursor.execute(self.create_query_category)
-        self.cursor.execute(self.create_query_source)
-        self.cursor.execute(self.create_query_news)
-        self.cursor.execute(self.create_query_config)
+        create_query_news = """
+                                CREATE TABLE IF NOT EXISTS news (
+                                   id TEXT PRIMARY KEY,
+                                   title TEXT,
+                                   source_id TEXT REFERENCES source(id) ON DELETE CASCADE,
+                                   category_id TEXT REFERENCES category(id) ON DELETE SET NULL,
+                                   author TEXT,
+                                   description TEXT,
+                                   content_html TEXT,
+                                   content_text TEXT,
+                                   keywords TEXT
+                                );
+                                """
+        create_query_category = """
+                                CREATE TABLE IF NOT EXISTS category (
+                                   id TEXT PRIMARY KEY,
+                                   title TEXT
+                                );
+                                """
+
+        create_query_source = """
+                                CREATE TABLE IF NOT EXISTS source (
+                                   id TEXT PRIMARY KEY,
+                                   url TEXT,
+                                   domain TEXT,
+                                   title TEXT,
+                                   publish_date TEXT,
+                                   last_mod TEXT,
+                                   author TEXT
+                                );
+                                """
+        create_query_config = """
+                                CREATE TABLE IF NOT EXISTS config (
+                                    id TEXT PRIMARY KEY,
+                                    domain TEXT,
+                                    news_id_selector TEXT,
+                                    news_from_list_selector TEXT,
+                                    news_title_selector TEXT,
+                                    publish_date_selector TEXT,
+                                    last_mod_selector TEXT,
+                                    author_selector TEXT,
+                                    description_selector TEXT,
+                                    content_html_selector TEXT,
+                                    content_text_selector TEXT,
+                                    keywords_selector TEXT,
+                                    category_id_selector TEXT,
+                                    category_url_list_selector TEXT,
+                                    category_title_selector TEXT,
+                                    next_page_selector TEXT
+                                );
+                """
+        self.cursor.execute(create_query_category)
+        self.cursor.execute(create_query_source)
+        self.cursor.execute(create_query_news)
+        self.cursor.execute(create_query_config)
         for data in DOMAIN_CONFIG:
             self.insert_data('config', data)
 
+        self.connection.commit()
+
+        self.cursor.close()
+        self.connection.close()
+
+    def open_spider(self, spider):
+        self.connection = psycopg2.connect(**DB_CONFIG)
+        self.cursor = self.connection.cursor()
 
     def close_spider(self, spider):
         if self.cursor:
@@ -87,9 +90,9 @@ class DatabasePipeline:
         if item_class == 'CategoryItem':
             self.insert_data('category', item)
         elif item_class == 'NewsItem':
-            self.insert_data('news',item)
+            self.insert_data('news', item)
         elif item_class == 'SourceItem':
-            self.insert_data('source',item)
+            self.insert_data('source', item)
         self.connection.commit()
         return item
 
@@ -123,4 +126,14 @@ class DatabasePipeline:
             data = dict(zip(column_fields, row_data))
         return data
 
+    def table_exists(self, table_name):
+        self.connection = psycopg2.connect(**DB_CONFIG)
+        self.cursor = self.connection.cursor()
+        try:
+            self.cursor.execute(f"SELECT 1 FROM {table_name} LIMIT 1;")
+            return True
+        except psycopg2.Error as e:
+            return False
 
+        self.cursor.close()
+        self.connection.close()

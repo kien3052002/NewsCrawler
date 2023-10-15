@@ -8,13 +8,15 @@ class CategorySpider(scrapy.Spider):
     name = 'category_spider'
     start_urls = ['https://vnexpress.net/kinh-doanh']
     selectors = None
-    db = None
+    db = DatabasePipeline()
 
     def __init__(self, *args, **kwargs):
         super(CategorySpider, self).__init__(*args, **kwargs)
-        self.db = DatabasePipeline()
 
     def start_requests(self):
+        while (self.db.table_exists('config') == False):
+            self.db.db_init()
+
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse)
 
     def parse(self, response):
