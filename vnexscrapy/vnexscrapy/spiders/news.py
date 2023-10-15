@@ -8,11 +8,10 @@ class NewsSpider(scrapy.Spider):
     name = 'news_spider'
     start_urls = ['https://vnexpress.net/kinh-doanh']
     selectors = None
-    db = None
+    db = DatabasePipeline()
 
     def __init__(self, *args, **kwargs):
         super(NewsSpider, self).__init__(*args, **kwargs)
-        self.db = DatabasePipeline()
 
     def start_requests(self):
         yield scrapy.Request(url=self.start_urls[0], callback=self.parse)
@@ -44,9 +43,9 @@ class NewsSpider(scrapy.Spider):
                 yield response.follow(link, self.parse_news, cb_kwargs={'category_id': category_id})
 
             # sang trang tiếp theo của cùng category
-            # next_page = response.css(self.selectors['next_page_selector']).get()
-            # if next_page:
-            #     yield response.follow(next_page, self.parse_category)
+            next_page = response.css(self.selectors['next_page_selector']).get()
+            if next_page:
+                yield response.follow(next_page, self.parse_category)
 
     def parse_news(self, response, category_id):
 
